@@ -19,12 +19,12 @@
     <p>Browse your directories and files below.</p>
     <h2>Directories</h2>
     <ul>
-        {% for directory in directories %} <li><a href="{{directory.name}}/">{{directory.name}}</a></li>
+        {% for directory in directories %} <li>📂 <a href="{{directory.name}}/">{{directory.name}}</a></li>
         {% endfor %}
     </ul>
     <h2>Files</h2>
     <ul>
-        {% for file in files %}<li><a href="{{file.name}}">{{file.name}}</a></li>
+        {% for file in files %}<li>📄 <a href="{{file.name}}">{{file.name}}</a></li>
         {% endfor %}
     </ul>
 </body>
