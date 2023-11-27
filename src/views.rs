@@ -11,7 +11,6 @@ use axum::{
     http::{uri::PathAndQuery, Uri},
     response::IntoResponse,
 };
-use axum::{routing::get, Router};
 
 /// the single view we use to render the html from a request path
 pub async fn render_folder_contents(uri: Uri, State(config): State<Config>) -> impl IntoResponse {
@@ -37,8 +36,8 @@ pub async fn render_folder_contents(uri: Uri, State(config): State<Config>) -> i
             // serve the data
             serve_file(file_data).into_response()
         }
-        Err(e) => {
-            // return the error
+        Err(_) => {
+            // we ignore the error, because then it is not a file and we assume a directory
             match list_elements_in_directory(request_path) {
                 Ok(render_data) => {
                     // todo: do not re-initialize the upon::Engine in every request, but re-use it instead
