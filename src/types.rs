@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug)]
 pub enum TalkyError {
     IoError(std::io::Error),
+    TextError(String),
 }
 
 #[derive(Serialize, Deserialize, Debug)]

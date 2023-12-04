@@ -39,7 +39,7 @@ pub fn get_custom_template(base_dir: String, path: String) -> Option<String> {
 /// the path may start with a prefix of / or not:
 /// "/a/b/c" -> ["/a", "/a/b", "/a/b/c"]
 /// "a/b/c" -> ["a", "a/b", "a/b/c"]
-fn get_path_list(mut path: String) -> Vec<String> {
+pub fn get_path_list(mut path: String) -> Vec<String> {
     let mut prefix: Option<String> = None;
     if path.starts_with('/') {
         path = path[1..path.len()].to_owned();

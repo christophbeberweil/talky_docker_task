@@ -52,7 +52,7 @@ pub async fn render_folder_contents(uri: Uri, State(config): State<Config>) -> i
     if easy_paths::is_dir(&fullpath) {
         // we ignore the error, because then it is not a file and we assume a directory
 
-        match list_elements_in_directory(&fullpath) {
+        match get_render_data_from_dir(&config.base_dir, &request_path) {
             Ok(render_data) => {
                 // todo: do not re-initialize the upon::Engine in every request, but re-use it instead
 
@@ -134,12 +134,20 @@ fn serve_file(file_data: Vec<u8>) -> impl IntoResponse {
 }
 
 /// given a path to a directory as string, this function will calculate the RenderData for the directory.
-fn list_elements_in_directory(dirpath: &String) -> Result<RenderData, TalkyError> {
+fn get_render_data_from_dir(
+    base_dir: &String,
+    request_path: &String,
+) -> Result<RenderData, TalkyError> {
+    let Some(dirpath) = easy_paths::get_path_joined(&[base_dir, request_path]) else {
+        return Err(TalkyError::TextError(
+            "Could not join paths with easy_paths".to_owned(),
+        ));
+    };
+
     match fs::read_dir(dirpath) {
         Ok(directory_content) => {
             let mut files: Vec<File> = vec![];
             let mut directories: Vec<Directory> = vec![];
-
             for entry in directory_content.into_iter() {
                 match entry {
                     Ok(dir_entry) => {
