@@ -3,6 +3,7 @@ use std::{fs, str::FromStr};
 use crate::{
     config::Config,
     types::{Directory, File, RenderData, TalkyError},
+    util::get_custom_template,
 };
 
 use axum::{
@@ -14,6 +15,7 @@ use axum::{
 
 /// the single view we use to render the html from a request path
 pub async fn render_folder_contents(uri: Uri, State(config): State<Config>) -> impl IntoResponse {
+    tracing::event!(tracing::Level::INFO, "render_folder_contents {}", &uri);
     let request_path = uri
         .path_and_query()
         .unwrap_or(
@@ -22,49 +24,107 @@ pub async fn render_folder_contents(uri: Uri, State(config): State<Config>) -> i
         .path()
         .to_owned();
 
-    let request_path = format!("{}{}", config.base_dir, request_path);
-
     // necessary, because blanks in the path at this point are url encoded to %20.
-    let request_path = request_path.replace("%20", " ");
+    let mut request_path = request_path.replace("%20", " ");
 
+    // remove first / from request path for proper path joining via easy_paths
+    if request_path.starts_with('/') {
+        request_path = request_path[1..request_path.len()].to_owned();
+    }
+
+    let Some(fullpath) =
+        easy_paths::get_path_joined(&[&config.base_dir.as_str(), &request_path.as_str()])
+    else {
+        return axum::response::Html("could not join paths".to_string()).into_response();
+    };
+
+    tracing::event!(
+        tracing::Level::DEBUG,
+        "render_folder_contents fullpath: {} + {} = {} ",
+        &config.base_dir,
+        &request_path,
+        &fullpath
+    );
     // are we looking at a file or a directory?
     // directory -> list the elements
     // file -> todo: Initiate Download somehow
 
-    match fs::read(request_path.clone()) {
-        Ok(file_data) => {
-            // serve the data
-            serve_file(file_data).into_response()
-        }
-        Err(_) => {
-            // we ignore the error, because then it is not a file and we assume a directory
-            match list_elements_in_directory(request_path) {
-                Ok(render_data) => {
-                    // todo: do not re-initialize the upon::Engine in every request, but re-use it instead
+    if easy_paths::is_dir(&fullpath) {
+        // we ignore the error, because then it is not a file and we assume a directory
 
-                    let default_template = fs::read_to_string("src/index.html")
-                        .expect("Should have been able to read the default index.html");
+        match list_elements_in_directory(&fullpath) {
+            Ok(render_data) => {
+                // todo: do not re-initialize the upon::Engine in every request, but re-use it instead
 
-                    let mut engine = upon::Engine::new();
-                    engine
-                        .add_template("default_template", default_template)
-                        .expect("The base template should render");
+                let default_template = fs::read_to_string("src/index.html")
+                    .expect("Should have been able to read the default index.html");
 
-                    // if there is an _index_talky.html in the directory, try to render it instead
+                let custom_template = get_custom_template(config.base_dir, request_path.clone());
 
-                    let rendered_template = engine
-                        .template("default_template")
-                        .render(render_data)
-                        .to_string();
+                let template = custom_template.unwrap_or(default_template);
 
-                    match rendered_template {
-                        Ok(rendered_text) => axum::response::Html(rendered_text).into_response(),
-                        Err(e) => axum::response::Html(format!("{e:?}")).into_response(),
+                let engine = upon::Engine::new();
+                //engine  .add_template("template", template) ;
+                match engine.compile(template) {
+                    Ok(rendered_template) => {
+                        match rendered_template.render(&engine, render_data).to_string() {
+                            Ok(rendered_text) => {
+                                axum::response::Html(rendered_text).into_response()
+                            }
+                            Err(e) => {
+                                tracing::event!(
+                                    tracing::Level::ERROR,
+                                    "Error when rendering template at {}: {:?}",
+                                    &request_path,
+                                    e
+                                );
+                                axum::response::Html(format!("{e:?}")).into_response()
+                            }
+                        }
+                    }
+
+                    Err(e) => {
+                        tracing::event!(
+                            tracing::Level::ERROR,
+                            "Error when compiling template at {}: {:?}",
+                            &request_path,
+                            e
+                        );
+                        axum::response::Html(format!("{e:?}")).into_response()
                     }
                 }
-                Err(e) => axum::response::Html(format!("{e:?}")).into_response(),
+
+                // if there is an _index_talky.html in the directory, try to render it instead
+            }
+            Err(e) => {
+                tracing::event!(
+                    tracing::Level::ERROR,
+                    "List elements in directory did not work {}: {:?}",
+                    &request_path,
+                    e
+                );
+                axum::response::Html(format!("{e:?}")).into_response()
             }
         }
+    } else if easy_paths::is_file(&fullpath) {
+        match fs::read(&fullpath) {
+            Ok(file_data) => {
+                // serve the data
+                serve_file(file_data).into_response()
+            }
+            Err(e) => {
+                tracing::event!(
+                    tracing::Level::ERROR,
+                    "could not read from file: {}",
+                    &fullpath,
+                );
+                axum::response::Html(format!("{e:?}")).into_response()
+            }
+        }
+    } else {
+        let message = format!("'{fullpath}' is not a file not a directory 🤷‍♂️");
+        tracing::event!(tracing::Level::ERROR, "{}", &message,);
+        axum::response::Html(message).into_response()
     }
 }
 
@@ -74,8 +134,7 @@ fn serve_file(file_data: Vec<u8>) -> impl IntoResponse {
 }
 
 /// given a path to a directory as string, this function will calculate the RenderData for the directory.
-fn list_elements_in_directory(dirpath: String) -> Result<RenderData, TalkyError> {
-    println!("{dirpath}");
+fn list_elements_in_directory(dirpath: &String) -> Result<RenderData, TalkyError> {
     match fs::read_dir(dirpath) {
         Ok(directory_content) => {
             let mut files: Vec<File> = vec![];
