@@ -16,6 +16,7 @@ RUN rm -r /usr/src/talky/src
 
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
+COPY templates ./templates
 RUN cargo build --release
 
 # Copy the source and build the application.

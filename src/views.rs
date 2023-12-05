@@ -56,12 +56,9 @@ pub async fn render_folder_contents(uri: Uri, State(config): State<Config>) -> i
             Ok(render_data) => {
                 // todo: do not re-initialize the upon::Engine in every request, but re-use it instead
 
-                let default_template = fs::read_to_string("src/index.html")
-                    .expect("Should have been able to read the default index.html");
-
                 let custom_template = get_custom_template(config.base_dir, request_path.clone());
 
-                let template = custom_template.unwrap_or(default_template);
+                let template = custom_template.unwrap_or(config.default_template);
 
                 let engine = upon::Engine::new();
                 //engine  .add_template("template", template) ;
