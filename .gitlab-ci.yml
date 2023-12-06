@@ -1,0 +1,32 @@
+stages:
+  - test
+  - images
+
+include:
+  - template: Security/SAST.gitlab-ci.yml
+
+test:code:
+  needs: [ ]
+  stage: test
+  image: rust:1.74-buster
+  script:
+    - cargo test
+
+
+build:image:latest:
+  needs: ["test:code"]
+  stage: images
+  image: docker:24.0.2-dind
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  services:
+    - docker:24.0.2-dind
+  before_script:
+    - docker info
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE:latest ./
+    - docker push $CI_REGISTRY_IMAGE:latest
