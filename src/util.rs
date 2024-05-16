@@ -106,13 +106,13 @@ mod test {
     fn test_get_path_list_a() {
         assert_eq!(
             get_path_list(&"a/b/c".to_owned()),
-            vec!["a", "a/b", "a/b/c",]
+            vec!["/", "/a", "/a/b", "/a/b/c",]
         );
     }
 
     #[test]
     fn test_get_path_list_b() {
-        assert_eq!(get_path_list(&"".to_owned()), vec![""]);
+        assert_eq!(get_path_list(&"".to_owned()), vec!["/"]);
     }
 
     #[test]
