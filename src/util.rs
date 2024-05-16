@@ -117,13 +117,24 @@ mod test {
     fn test_get_path_list_a() {
         assert_eq!(
             get_path_list(&"a/b/c".to_owned(), false),
+            vec!["a", "a/b", "a/b/c",]
+        );
+    }
+    #[test]
+    fn test_get_path_list_a_2() {
+        assert_eq!(
+            get_path_list(&"a/b/c".to_owned(), true),
             vec!["/", "/a", "/a/b", "/a/b/c",]
         );
     }
 
     #[test]
     fn test_get_path_list_b() {
-        assert_eq!(get_path_list(&"".to_owned(), false), vec!["/"]);
+        assert_eq!(get_path_list(&"".to_owned(), false), vec![""]);
+    }
+    #[test]
+    fn test_get_path_list_b_2() {
+        assert_eq!(get_path_list(&"".to_owned(), true), vec!["/"]);
     }
 
     #[test]
