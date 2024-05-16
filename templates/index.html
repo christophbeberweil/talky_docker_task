@@ -38,7 +38,7 @@
         <div>
             <h2>Files</h2>
             <ul>
-                {% for file in files %}<li>📄 <a href="{{file.name}}">{{file.name}}</a></li>
+                {% for file in files %}<li>📄 <a href="{{current_path}}{{file.name}}">{{file.name}}</a></li>
                 {% endfor %}
             </ul>
         </div>
