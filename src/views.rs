@@ -1,9 +1,9 @@
-use std::{fs, str::FromStr};
+use std::{collections::btree_map, fs, str::FromStr};
 
 use crate::{
     config::Config,
-    types::{Directory, File, RenderData, TalkyError},
-    util::get_custom_template,
+    types::{Breadcrumb, Directory, File, RenderData, TalkyError},
+    util::{format_prefix_path, get_custom_template, get_path_list},
 };
 
 use axum::{
@@ -119,7 +119,12 @@ pub async fn render_folder_contents(uri: Uri, State(config): State<Config>) -> i
             }
         }
     } else {
-        let message = format!("'{fullpath}' is not a file not a directory 🤷‍♂️");
+        let message = format!(
+            "'{fullpath}' is not a file {} not a directory {} 🤷‍♂️, existing {}",
+            easy_paths::is_file(&fullpath),
+            easy_paths::is_dir(&fullpath),
+            easy_paths::is_existing_path(&fullpath),
+        );
         tracing::event!(tracing::Level::ERROR, "{}", &message,);
         axum::response::Html(message).into_response()
     }
@@ -176,7 +181,29 @@ fn get_render_data_from_dir(
                 }
             }
 
-            Ok(RenderData { directories, files })
+            files.sort();
+
+            let mut breadcrumbs = get_path_list(request_path);
+            breadcrumbs.pop();
+
+            let breadcrumbs = breadcrumbs
+                .iter()
+                .map(|b| {
+                    let path = b.to_owned();
+                    let mut display = b.split('/').last().unwrap_or("/").to_owned();
+                    if display == *"" {
+                        "🏠".clone_into(&mut display);
+                    }
+                    Breadcrumb { path, display }
+                })
+                .collect();
+
+            Ok(RenderData {
+                current_path: format_prefix_path(request_path),
+                directories,
+                files,
+                breadcrumbs,
+            })
         }
         Err(e) => Err(TalkyError::IoError(e)),
     }

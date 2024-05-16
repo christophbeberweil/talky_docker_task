@@ -19,13 +19,19 @@
         <h1>Talky</h1>
     </nav>
 
+    <div class="breadcrumbs">
+        {% for breadcrumb in breadcrumbs %} 
+        <a href="{{breadcrumb.path}}">{{breadcrumb.display}}</a> <span>/</span>
+        {% endfor %}
+    </div>
+
 
     <div class="body-wrapper">
         <p>Browse your directories and files below.</p>
         <div>
             <h2>Directories</h2>
             <ul>
-                {% for directory in directories %} <li>📂 <a href="{{directory.name}}/">{{directory.name}}</a></li>
+                {% for directory in directories %} <li>📂 <a href="{{current_path}}{{directory.name}}">{{directory.name}}</a></li>
                 {% endfor %}
             </ul>
         </div>
@@ -44,6 +50,19 @@
     body {
         margin: 0;
         padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    li {
+        list-style: none;
+    }
+    .breadcrumbs{
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 10px;
     }
 
     .body-wrapper {
