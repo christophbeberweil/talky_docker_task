@@ -1,4 +1,4 @@
-use std::{collections::btree_map, fs, str::FromStr};
+use std::{fs, str::FromStr};
 
 use crate::{
     config::Config,
@@ -183,7 +183,7 @@ fn get_render_data_from_dir(
 
             files.sort();
 
-            let mut breadcrumbs = get_path_list(request_path);
+            let mut breadcrumbs = get_path_list(request_path, true);
             breadcrumbs.pop();
 
             let breadcrumbs = breadcrumbs

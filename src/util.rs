@@ -1,4 +1,4 @@
-use std::{fs, thread::panicking};
+use std::fs;
 
 /// traverses the directories in path from base_dir to find the
 /// upper _index_talky.html file and return its contents
@@ -10,13 +10,14 @@ pub fn get_custom_template(base_dir: String, path: String) -> Option<String> {
         &path
     );
 
-    let folders = get_path_list(&path);
+    let folders = get_path_list(&path, false);
 
     let mut template: Option<String> = None;
     for folder in folders {
         //let path = format!("{base_dir}{folder}/_index_talky.html");
         let combined_path =
             easy_paths::get_path_joined(&[&base_dir, &folder, &"_index_talky.html".to_owned()])?;
+        tracing::event!(tracing::Level::INFO, "combined path {} ", &combined_path,);
 
         match fs::read_to_string(&combined_path) {
             Ok(cusom_template) => {
@@ -33,6 +34,12 @@ pub fn get_custom_template(base_dir: String, path: String) -> Option<String> {
         }
     }
 
+    let display_text = template.clone().unwrap_or("None".to_owned());
+    tracing::event!(
+        tracing::Level::INFO,
+        "Get custom template found {}",
+        display_text
+    );
     template
 }
 
@@ -40,9 +47,13 @@ pub fn get_custom_template(base_dir: String, path: String) -> Option<String> {
 /// the path may start with a prefix of / or not:
 /// "/a/b/c" -> ["/a", "/a/b", "/a/b/c"]
 /// "a/b/c" -> ["a", "a/b", "a/b/c"]
-pub fn get_path_list(path: &String) -> Vec<String> {
+pub fn get_path_list(path: &String, set_prefix: bool) -> Vec<String> {
     let mut path = path.to_owned();
-    let mut prefix: Option<String> = Some("/".to_owned());
+
+    let mut prefix: Option<String> = None;
+    if set_prefix {
+        prefix = Some("/".to_owned());
+    }
     if path.starts_with('/') {
         path = path[1..path.len()].to_owned();
         prefix = Some("/".to_owned())
@@ -105,28 +116,28 @@ mod test {
     #[test]
     fn test_get_path_list_a() {
         assert_eq!(
-            get_path_list(&"a/b/c".to_owned()),
+            get_path_list(&"a/b/c".to_owned(), false),
             vec!["/", "/a", "/a/b", "/a/b/c",]
         );
     }
 
     #[test]
     fn test_get_path_list_b() {
-        assert_eq!(get_path_list(&"".to_owned()), vec!["/"]);
+        assert_eq!(get_path_list(&"".to_owned(), false), vec!["/"]);
     }
 
     #[test]
     fn test_get_path_list_c() {
-        assert_eq!(get_path_list(&"/".to_owned()), vec!["/"]);
+        assert_eq!(get_path_list(&"/".to_owned(), false), vec!["/"]);
     }
 
     #[test]
     fn test_get_path_list_d() {
-        assert_eq!(get_path_list(&"/a".to_owned()), vec!["/", "/a"]);
+        assert_eq!(get_path_list(&"/a".to_owned(), false), vec!["/", "/a"]);
     }
 
     #[test]
     fn test_get_path_prefix_list() {
-        assert!(get_path_list(&"/a/b/c".to_owned()) == vec!["/", "/a", "/a/b", "/a/b/c"]);
+        assert!(get_path_list(&"/a/b/c".to_owned(), false) == vec!["/", "/a", "/a/b", "/a/b/c"]);
     }
 }
