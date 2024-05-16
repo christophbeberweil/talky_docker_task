@@ -15,17 +15,18 @@ pub fn get_custom_template(base_dir: String, path: String) -> Option<String> {
     let mut template: Option<String> = None;
     for folder in folders {
         //let path = format!("{base_dir}{folder}/_index_talky.html");
-        let Some(combined_path) =
-            easy_paths::get_path_joined(&[&base_dir, &folder, &"_index_talky.html".to_owned()])
-        else {
-            return None;
-        };
+        let combined_path =
+            easy_paths::get_path_joined(&[&base_dir, &folder, &"_index_talky.html".to_owned()])?;
 
         match fs::read_to_string(&combined_path) {
             Ok(cusom_template) => {
+                tracing::event!(
+                    tracing::Level::DEBUG,
+                    "Found custom template at {}",
+                    &combined_path
+                );
                 template = Some(cusom_template);
             }
-
             Err(_e) => {
                 // ignore the error
             }

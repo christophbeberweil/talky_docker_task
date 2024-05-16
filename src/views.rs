@@ -161,7 +161,7 @@ fn get_render_data_from_dir(
                         if file_type.is_file() {
                             let file_name = dir_entry.file_name().to_str().unwrap_or("").to_owned();
                             // hide hidden files. But maybe there is a better way?
-                            if !file_name.starts_with('.') {
+                            if !file_name.starts_with('.') && file_name != *"_index_talky.html" {
                                 files.push(File {
                                     name: file_name.clone(),
                                 })
