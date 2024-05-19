@@ -10,23 +10,37 @@ pub fn get_custom_template(base_dir: String, path: String) -> Option<String> {
         &path
     );
 
-    let folders = get_path_list(&path, false);
+    let raw_folders = get_path_list(&path, false);
+    let mut folders = Vec::new();
+    folders.push("".to_owned());
+    folders.extend(raw_folders);
 
     let mut template: Option<String> = None;
+    let mut template_path: Option<String> = None;
+    tracing::event!(
+        tracing::Level::INFO,
+        "GET_CUSTOM_TEMPLATE Checking folders:\n{:#?}",
+        &folders
+    );
     for folder in folders {
         //let path = format!("{base_dir}{folder}/_index_talky.html");
         let combined_path =
             easy_paths::get_path_joined(&[&base_dir, &folder, &"_index_talky.html".to_owned()])?;
-        tracing::event!(tracing::Level::INFO, "combined path {} ", &combined_path,);
+        tracing::event!(
+            tracing::Level::INFO,
+            "GET_CUSTOM_TEMPLATE combined path {} ",
+            &combined_path,
+        );
 
         match fs::read_to_string(&combined_path) {
             Ok(cusom_template) => {
                 tracing::event!(
                     tracing::Level::DEBUG,
-                    "Found custom template at {}",
+                    "GET_CUSTOM_TEMPLATE Found custom template at {}",
                     &combined_path
                 );
                 template = Some(cusom_template);
+                template_path = Some(combined_path);
             }
             Err(_e) => {
                 // ignore the error
@@ -34,10 +48,10 @@ pub fn get_custom_template(base_dir: String, path: String) -> Option<String> {
         }
     }
 
-    let display_text = template.clone().unwrap_or("None".to_owned());
+    let display_text = template_path.clone().unwrap_or("None".to_owned());
     tracing::event!(
         tracing::Level::INFO,
-        "Get custom template found {}",
+        "GET_CUSTOM_TEMPLATE found {}",
         display_text
     );
     template
