@@ -205,6 +205,7 @@ fn get_render_data_from_dir(
                 }
             }
 
+            directories.sort();
             files.sort();
 
             let mut breadcrumbs = get_path_list(request_path, true);

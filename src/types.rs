@@ -6,7 +6,7 @@ pub enum TalkyError {
     TextError(String),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Directory {
     pub name: String,
 }
