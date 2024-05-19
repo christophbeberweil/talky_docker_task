@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, fs, path::Path, str::FromStr};
+use std::{fs, path::Path, str::FromStr};
 
 use crate::{
     config::Config,
@@ -50,11 +50,6 @@ pub async fn render_folder_contents(uri: Uri, State(config): State<Config>) -> i
     // file -> todo: Initiate Download somehow
 
     let fullpath = Path::new(&fullpath);
-    let Ok(metadata) = fs::metadata(fullpath) else {
-        let message = format!("Could not get metadata of '{}'", fullpath.display(),);
-        tracing::event!(tracing::Level::ERROR, "{}", &message,);
-        return axum::response::Html(message).into_response();
-    };
 
     if fullpath.is_dir() {
         // we ignore the error, because then it is not a file and we assume a directory
