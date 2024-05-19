@@ -1,4 +1,4 @@
-use std::{fs, str::FromStr};
+use std::{ffi::OsStr, fs, path::Path, str::FromStr};
 
 use crate::{
     config::Config,
@@ -49,7 +49,14 @@ pub async fn render_folder_contents(uri: Uri, State(config): State<Config>) -> i
     // directory -> list the elements
     // file -> todo: Initiate Download somehow
 
-    if easy_paths::is_dir(&fullpath) {
+    let fullpath = Path::new(&fullpath);
+    let Ok(metadata) = fs::metadata(fullpath) else {
+        let message = format!("Could not get metadata of '{}'", fullpath.display(),);
+        tracing::event!(tracing::Level::ERROR, "{}", &message,);
+        return axum::response::Html(message).into_response();
+    };
+
+    if fullpath.is_dir() {
         // we ignore the error, because then it is not a file and we assume a directory
 
         match get_render_data_from_dir(&config.base_dir, &request_path) {
@@ -103,8 +110,25 @@ pub async fn render_folder_contents(uri: Uri, State(config): State<Config>) -> i
                 axum::response::Html(format!("{e:?}")).into_response()
             }
         }
-    } else if easy_paths::is_file(&fullpath) {
-        match fs::read(&fullpath) {
+    } else if fullpath.is_file() {
+        // return the file contents of text files directly
+        let file_extension = fullpath.extension();
+        if let Some(extension) = file_extension {
+            if let Some(extension_str) = extension.to_str() {
+                if ["html", "md", "json", "xml", "log", "conf", "css"].contains(&extension_str) {
+                    let Ok(contents) = fs::read_to_string(fullpath) else {
+                        let message = format!("Could not read {}", fullpath.display());
+                        tracing::event!(tracing::Level::ERROR, "{}", &message,);
+                        return axum::response::Html(message).into_response();
+                    };
+
+                    return axum::response::Html(contents).into_response();
+                }
+            }
+        }
+
+        // otherwise, offer to download the file
+        match fs::read(fullpath) {
             Ok(file_data) => {
                 // serve the data
                 serve_file(file_data).into_response()
@@ -113,17 +137,17 @@ pub async fn render_folder_contents(uri: Uri, State(config): State<Config>) -> i
                 tracing::event!(
                     tracing::Level::ERROR,
                     "could not read from file: {}",
-                    &fullpath,
+                    fullpath.display(),
                 );
                 axum::response::Html(format!("{e:?}")).into_response()
             }
         }
     } else {
         let message = format!(
-            "'{fullpath}' is not a file {} not a directory {} 🤷‍♂️, existing {}",
-            easy_paths::is_file(&fullpath),
-            easy_paths::is_dir(&fullpath),
-            easy_paths::is_existing_path(&fullpath),
+            "'{}' is not a file {} not a directory {} 🤷‍♂️",
+            fullpath.display(),
+            fullpath.is_file(),
+            fullpath.is_dir(),
         );
         tracing::event!(tracing::Level::ERROR, "{}", &message,);
         axum::response::Html(message).into_response()

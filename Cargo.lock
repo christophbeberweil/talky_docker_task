@@ -841,6 +841,7 @@ dependencies = [
  "axum",
  "easy_paths",
  "include_dir",
+ "mime",
  "serde",
  "tokio",
  "tower-http",
